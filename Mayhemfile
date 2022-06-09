@@ -1,7 +1,6 @@
-project: rnshah9/mayhem-zuo
+project: zuo
 target: zuo
-tests: null
 
 cmds:
-  - cmd: /repo/zuo @@
+  - cmd: /repo/zuo /test.zuo
     filepath: /test.zuo
