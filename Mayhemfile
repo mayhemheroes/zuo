@@ -2,5 +2,4 @@ project: zuo
 target: zuo
 
 cmds:
-  - cmd: /repo/zuo /test.zuo
-    filepath: /test.zuo
+  - cmd: /repo/zuo @@
