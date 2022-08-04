@@ -17,9 +17,8 @@ tend to use the names of Unix programs, which are much shorter than
 Racket's long names.
 
 The @racketmodname[zuo/base] language includes most of the bindings
-from @racketmodname[zuo], but not the ones that are from
-@racketmodname[zuo/cmdline], @racketmodname[zuo/build],
-@racketmodname[zuo/shell], @racketmodname[zuo/thread],
+from @racketmodname[zuo], but not the ones from @racketmodname[zuo/cmdline],
+@racketmodname[zuo/build], @racketmodname[zuo/shell], @racketmodname[zuo/thread],
 @racketmodname[zuo/glob], or @racketmodname[zuo/config].
 
 @section{Syntax and Evaluation Model}
@@ -54,7 +53,7 @@ modules that import it. Variables and macros that are not provided are
 completely inaccessible outside of the module.
 
 There are no @defterm{phases} in the sense of Racket. When
-@racketmodname[zuo] macro expansion encountered an import, it makes
+@racketmodname[zuo] macro expansion encounters an import, it makes
 all of the imported module's exports immediately available for use in
 macro implementations, both variables and macros. For example, an
 imported macro might be used both to implement a macro body and in
@@ -440,9 +439,11 @@ endianness.}
 Tries to parse @racket[str] as an integer returning @racket[#f] if
 that fails.}
 
-@defproc[(string-sha1 [str string?]) string?]{
+@defproc[(string-sha256 [str string?]) string?]{
 
-Returns the SHA-1 hash of @racket[str] as a 40-digit hexadecimal string.}
+Returns the SHA-256 hash of @racket[str] as a 64-digit hexadecimal string.
+
+See also @racket[file-sha256] and @racket[sha256-length].}
 
 @defform[(char str)]{
 
@@ -499,7 +500,9 @@ back into Zuo.
 )]{
 
 Analogous to @realracket*[symbol? symbol->string string->symbol
-string->uninterned-symbol] from @racketmodname[racket].}
+string->uninterned-symbol] from @racketmodname[racket], but
+@racket[string->symbol] accepts only strings that do not contain the
+null character.}
 
 
 @section{Hash Tables (Persistent Maps)}
@@ -509,7 +512,7 @@ hashing, but they're called that for similarly to Racket. A hash table
 maps symbols to other values, and updating a hash table produces a new
 hash table (which, internally, may share with the original).
 
-Hash table print in a way analogous to Racket, but there is no reader
+Hash tables print in a way analogous to Racket, but there is no reader
 support to convert the textual form back into a hash table value.
 
 @deftogether[(
@@ -537,10 +540,20 @@ support to convert the textual form back into a hash table value.
 
 Analogous to @realracket*[hash? hash hash-ref hash-set hash-remove
 hash-keys hash-count hash-keys-subset?] from @racketmodname[racket].
-Besides being constrained to symbol keys, there is one additional
-difference: the third argument to @racket[hash-ref], when supplied,
-is always used as a value to return if a key is missing, as
-opposed to a failure thunk.}
+
+Besides being constrained to symbol keys, there are two additional
+differences:
+
+@itemlist[
+
+ @item{the third argument to @racket[hash-ref], when supplied, is
+       always used as a value to return if a key is missing, as
+       opposed to a failure thunk; and}
+
+ @item{the @racket[hash-keys] function returns interned keys sorted
+       alphabetically.}
+
+]}
 
 
 @section{Procedures}
@@ -564,8 +577,8 @@ checks only whether the immediately enclosing prompt has the given tag.}
 
 @section{Paths}
 
-A @deftech{path string} is is a @tech{string} that is not non-empty
-and to contains no nul bytes.
+A @deftech{path string} is a @tech{string} that is not empty
+and contains no null bytes.
 
 @defproc[(path-string? [v any/c]) boolean?]{
 
@@ -611,11 +624,11 @@ all path separators the platform default (on Windows).}
 
 @defproc[(find-relative-path [base path-string?] [path path-string?]) path-string?]{
 
-Attempts to finds a path relative to @racket[base] that accesses the
+Attempts to find a path relative to @racket[base] that accesses the
 same file or directory as @racket[path]. Both @racket[base] and
 @racket[path] must be normalized in the sense of
 @racket[simple-form-path], otherwise @filepath{.} and @filepath{..}
-elements are treated normal path elements. Assuming that @racket[base]
+elements are treated as normal path elements. Assuming that @racket[base]
 and @racket[path] are normalized, the result is always normalized.
 
 The result path depends on whether @racket[base] and @racket[path] are
@@ -1148,14 +1161,20 @@ with an executable name.}
 
 @section{Filesystem}
 
-@defproc[(stat [name path-string?] [follow-links? any/c #t]) (or/c hash? #f)]{
+@defproc[(stat [name path-string?]
+               [follow-links? any/c #t]
+               [false-on-error? any/c #f])
+         (or/c hash? #f)]{
 
 Returns information about the file, directory, or link referenced by
 @racket[name]. If @racket[follow-links?] is @racket[#f], then when
 @racket[name] refers to a link, information is reported about the
 link; otherwise, information is reported about the target of a link.
 
-If no such file, directory, or link exists, the result is @racket[#f].
+If @racket[name] is a valid path but such file, directory, or link exists,
+the result is @racket[#f]. If accessing @racket[name] encounters an error
+(e.g., @racket[name] uses a file as a directory or permission is denied),
+then @racket[#f] is reported instead of an error if @racket[false-on-error?].
 Otherwise, the hash table has similar keys and values as
 @realracket[file-or-directory-stat] from @racketmodname[racket], but
 with only certain keys per platform:
@@ -1255,7 +1274,9 @@ a link to a directory),.}
 )]{
 
 Uses @racket[stat] to check for a file, directory, or link,
-respectively.}
+respectively. If @racket[stat] encounters an error (e.g., access
+permission), then the file, directory, or link is treated as
+non-existent.}
 
 
 @section{Run Time Configuration}
@@ -1267,7 +1288,7 @@ Zuo process. The hash table includes the following keys:
 
 @itemlist[
 
-@item{@racket['args]: comment-line arguments provided when the
+@item{@racket['args]: command-line arguments provided when the
       process was started, not counting Zuo configuration arguments or
       the name of a script to run}
 
@@ -1281,6 +1302,13 @@ Zuo process. The hash table includes the following keys:
 @item{@racket['exe]: an absolute path for the running Zuo executable}
 
 @item{@racket['system-type]: @racket['unix] or @racket['windows]}
+
+@item{@racket['toolchain-type]: @racket['unix] (@exec{cc}, etc.) or
+      @racket['windows] (@exec{cl.exe}, etc.); on Windows, the default
+      is determined by the compiler used to build the Zuo executable,
+      but it can be set explicitly by defining either the
+      @tt{ZUO_WINDOWS_TOOLCHAIN} or @tt{ZUO_UNIX_TOOLCHAIN}
+      preprocessor symbol when compiliing Zuo}
 
 @item{@racket['sys-dir] (Windows only): the path to the system directory}
 

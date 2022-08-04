@@ -111,7 +111,7 @@ Equivalent to @racket[((glob->matcher glob) str)].}
 @defzuomodule[zuo/thread]
 
 To use cooperative threads, create a @deftech{threading context} with
-@racket[call-in-main-thread], and perform a thread operations---such
+@racket[call-in-main-thread], and perform thread operations---such
 as creating a new thread with @racket[thread] or a channel with
 @racket[channel]---during the body of the thunk provided to
 @racket[call-in-main-thread]. Threads can block either on channels or
@@ -226,7 +226,9 @@ error is reported if a reference @nonterm{name} has no value in
 The C-tool procedures provided by @racketmodname[zuo/c] accept a
 @deftech{tool configuration} hash table to describe a C compiler,
 linker, archiver, and associated flags. When potential configuration
-is missing, a default suitable for the current system is used. Values
+is missing, a default suitable for the current toolchain is used,
+where the toolchain is determined through @racket[(hash-ref
+(runtime-env) 'toolchain-type)]. Values
 in a tool configuration hash table are shell-command fragments, not
 individual arguments. For example, it could make sense to configure
 @racket['CC] as @racket["libtool cc"], which would run @exec{libtool}
