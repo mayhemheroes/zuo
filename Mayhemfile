@@ -1,7 +1,7 @@
 project: zuo
 target: zuo
 testsuite:
-  - file://local/hello.zuo
+  - file://local/
 
 cmds:
   - cmd: /repo/zuo @@
